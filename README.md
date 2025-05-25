@@ -33,9 +33,6 @@ A beautiful, feature-rich Flutter application for tracking expenses offline with
 - **Data Management** - Export/import and reset functionality
 - **Settings Customization** - Comprehensive app configuration
 
-## 📱 Screenshots
-
-*Screenshots will be added here*
 
 ## 🚀 Getting Started
 
