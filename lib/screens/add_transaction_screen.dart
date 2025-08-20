@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction.dart';
+import '../models/expense_group.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/expense_group_provider.dart';
 import '../providers/settings_provider.dart';
+import 'add_group_screen.dart';
 
 class AddTransactionScreen extends StatefulWidget {
-  const AddTransactionScreen({super.key});
+  final int? initialGroupId;
+
+  const AddTransactionScreen({super.key, this.initialGroupId});
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -19,6 +24,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String _selectedType = 'expense';
   String _selectedCategory = 'Food';
   DateTime _selectedDate = DateTime.now();
+  int? _selectedGroupId;
+  bool _isLoading = false;
 
   final List<String> _expenseCategories = [
     'Food',
@@ -41,40 +48,66 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _selectedGroupId = widget.initialGroupId;
+    _loadGroups();
+  }
+
+  Future<void> _loadGroups() async {
+    await Provider.of<ExpenseGroupProvider>(context, listen: false).loadExpenseGroups();
+  }
+
+  @override
   void dispose() {
     _amountController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
-  void _submitForm() async {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _saveTransaction() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
       final transaction = ExpenseTransaction(
         amount: double.parse(_amountController.text),
         category: _selectedCategory,
         description: _descriptionController.text,
         date: _selectedDate,
         type: _selectedType,
+        groupId: _selectedGroupId,
       );
 
-      final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
-      final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
-      
-      await transactionProvider.addTransaction(transaction);
-      
-      // Check for low balance notification after adding expense
-      if (_selectedType == 'expense') {
-        await transactionProvider.checkLowBalanceNotification(
-          userName: settingsProvider.userName,
-          notificationsEnabled: settingsProvider.notificationsEnabled,
-          threshold: settingsProvider.lowBalanceThreshold,
-          message: settingsProvider.notificationMessage,
-          currencySymbol: settingsProvider.currencySymbol,
+      await Provider.of<TransactionProvider>(context, listen: false)
+          .addTransaction(transaction);
+
+      // Refresh group data if transaction was added to a group
+      if (_selectedGroupId != null) {
+        await Provider.of<ExpenseGroupProvider>(context, listen: false)
+            .loadExpenseGroups();
+      }
+
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving transaction: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
-      
+    } finally {
       if (mounted) {
-        Navigator.pop(context);
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -99,8 +132,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       appBar: AppBar(
         title: const Text('Add Transaction'),
       ),
-      body: Consumer<SettingsProvider>(
-        builder: (context, settingsProvider, child) {
+      body: Consumer2<SettingsProvider, ExpenseGroupProvider>(
+        builder: (context, settingsProvider, groupProvider, child) {
+          final groups = groupProvider.groups;
+          
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Form(
@@ -188,6 +223,52 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
+                  if (groups.isNotEmpty) ...[
+                    DropdownButtonFormField<int?>(
+                      value: _selectedGroupId,
+                      decoration: const InputDecoration(
+                        labelText: 'Expense Group (Optional)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.folder),
+                      ),
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('No Group'),
+                        ),
+                        ...groups.map((group) => DropdownMenuItem<int?>(
+                          value: group.id,
+                          child: Text(group.name),
+                        )),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedGroupId = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  // Always show create group option
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.create_new_folder),
+                      title: const Text('Create New Group'),
+                      subtitle: const Text('Organize your expenses'),
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AddGroupScreen(),
+                          ),
+                        );
+                        if (result == true) {
+                          await _loadGroups();
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   ListTile(
                     title: const Text('Date'),
                     subtitle: Text(
@@ -198,14 +279,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: _submitForm,
+                    onPressed: _isLoading ? null : _saveTransaction,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    child: const Text(
-                      'Add Transaction',
-                      style: TextStyle(fontSize: 16),
-                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            'Add Transaction',
+                            style: TextStyle(fontSize: 16),
+                          ),
                   ),
                 ],
               ),

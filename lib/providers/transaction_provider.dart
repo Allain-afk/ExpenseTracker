@@ -32,16 +32,46 @@ class TransactionProvider with ChangeNotifier {
   Future<void> addTransaction(ExpenseTransaction transaction) async {
     await _dbHelper.insertTransaction(transaction);
     await loadTransactions();
+    
+    // If transaction has a group, refresh group data
+    if (transaction.groupId != null) {
+      await _refreshGroupData(transaction.groupId!);
+    }
   }
 
   Future<void> updateTransaction(ExpenseTransaction transaction) async {
+    // Get the old transaction to check if group changed
+    final oldTransaction = _transactions.firstWhere((t) => t.id == transaction.id);
+    final oldGroupId = oldTransaction.groupId;
+    
     await _dbHelper.updateTransaction(transaction);
     await loadTransactions();
+    
+    // Refresh group data if group changed or if transaction has a group
+    if (oldGroupId != transaction.groupId) {
+      if (oldGroupId != null) {
+        await _refreshGroupData(oldGroupId);
+      }
+      if (transaction.groupId != null) {
+        await _refreshGroupData(transaction.groupId!);
+      }
+    } else if (transaction.groupId != null) {
+      await _refreshGroupData(transaction.groupId!);
+    }
   }
 
   Future<void> deleteTransaction(int id) async {
+    // Get the transaction to check its group before deleting
+    final transaction = _transactions.firstWhere((t) => t.id == id);
+    final groupId = transaction.groupId;
+    
     await _dbHelper.deleteTransaction(id);
     await loadTransactions();
+    
+    // Refresh group data if transaction had a group
+    if (groupId != null) {
+      await _refreshGroupData(groupId);
+    }
   }
 
   Future<void> checkLowBalanceNotification({
@@ -99,6 +129,17 @@ class TransactionProvider with ChangeNotifier {
       );
     } catch (e) {
       print('Error updating widget: $e');
+    }
+  }
+
+  Future<void> _refreshGroupData(int groupId) async {
+    try {
+      // Import and refresh ExpenseGroupProvider
+      // This is a workaround since we can't directly access other providers
+      // The group screens will refresh when they rebuild
+      debugPrint('Transaction modified for group $groupId - group data should refresh');
+    } catch (e) {
+      debugPrint('Error refreshing group data: $e');
     }
   }
 } 

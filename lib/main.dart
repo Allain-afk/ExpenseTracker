@@ -26,6 +26,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'providers/transaction_provider.dart';
+import 'providers/expense_group_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/add_transaction_screen.dart';
 import 'screens/splash_screen.dart';
@@ -54,6 +55,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => TransactionProvider()),
+        ChangeNotifierProvider(create: (context) => ExpenseGroupProvider()),
         ChangeNotifierProvider(create: (context) => SettingsProvider()),
       ],
       child: MaterialApp(

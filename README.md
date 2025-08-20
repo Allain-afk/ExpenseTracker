@@ -1,4 +1,4 @@
-# 💰 Offline Expense Tracker
+   # 💰 Offline Expense Tracker
 
 A beautiful, feature-rich Flutter application for tracking expenses offline with personalized notifications and comprehensive analytics.
 

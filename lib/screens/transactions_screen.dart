@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/expense_group_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/transaction.dart';
+import '../models/expense_group.dart';
 import 'edit_transaction_screen.dart';
 
 class TransactionsScreen extends StatefulWidget {
@@ -47,8 +49,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           ),
         ],
       ),
-      body: Consumer2<TransactionProvider, SettingsProvider>(
-        builder: (context, transactionProvider, settingsProvider, child) {
+      body: Consumer3<TransactionProvider, ExpenseGroupProvider, SettingsProvider>(
+        builder: (context, transactionProvider, groupProvider, settingsProvider, child) {
           final transactions = _getFilteredTransactions(transactionProvider.transactions);
           
           if (transactions.isEmpty) {
@@ -93,6 +95,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 transaction,
                 settingsProvider.currencySymbol,
                 transactionProvider,
+                groupProvider,
               );
             },
           );
@@ -116,7 +119,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     ExpenseTransaction transaction,
     String currencySymbol,
     TransactionProvider provider,
+    ExpenseGroupProvider groupProvider,
   ) {
+    final group = transaction.groupId != null 
+        ? groupProvider.getGroupById(transaction.groupId!)
+        : null;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -135,6 +143,34 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(transaction.category),
+            if (group != null)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.folder,
+                      size: 12,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      group.name,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Text(
               DateFormat('MMM d, y • h:mm a').format(transaction.date),
               style: TextStyle(

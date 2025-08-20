@@ -3,8 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/expense_group_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/transaction.dart';
+import 'group_detail_screen.dart';
+import 'add_transaction_screen.dart';
+import 'add_group_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,13 +17,27 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadData();
+    }
   }
 
   Future<void> _loadData() async {
@@ -27,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoading = true;
     });
     await Provider.of<TransactionProvider>(context, listen: false).loadTransactions();
+    await Provider.of<ExpenseGroupProvider>(context, listen: false).loadExpenseGroups();
     setState(() {
       _isLoading = false;
     });
@@ -50,18 +69,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class HomeScreenContent extends StatelessWidget {
+class HomeScreenContent extends StatefulWidget {
   const HomeScreenContent({super.key});
 
   @override
+  State<HomeScreenContent> createState() => _HomeScreenContentState();
+}
+
+class _HomeScreenContentState extends State<HomeScreenContent> {
+  @override
   Widget build(BuildContext context) {
-    return Consumer2<TransactionProvider, SettingsProvider>(
-      builder: (context, provider, settingsProvider, child) {
+    return Consumer3<TransactionProvider, ExpenseGroupProvider, SettingsProvider>(
+      builder: (context, provider, groupProvider, settingsProvider, child) {
         final currencySymbol = settingsProvider.currencySymbol;
         
         return RefreshIndicator(
           onRefresh: () async {
             await provider.loadTransactions();
+            await groupProvider.loadExpenseGroups();
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -72,6 +97,8 @@ class HomeScreenContent extends StatelessWidget {
                 _buildBalanceCard(provider, currencySymbol),
                 const SizedBox(height: 20),
                 _buildQuickStats(provider, currencySymbol),
+                const SizedBox(height: 20),
+                _buildGroupsSummary(groupProvider, currencySymbol),
                 const SizedBox(height: 20),
                 _buildExpenseChart(provider, currencySymbol),
                 const SizedBox(height: 20),
@@ -211,6 +238,291 @@ class HomeScreenContent extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildGroupsSummary(ExpenseGroupProvider groupProvider, String currencySymbol) {
+    final groups = groupProvider.groups;
+    
+    if (groups.isEmpty) {
+      return Card(
+        elevation: 4,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Expense Groups',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.folder_open,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No expense groups yet',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Create your first expense group to organize your expenses',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AddGroupScreen(),
+                          ),
+                        );
+                        if (result == true) {
+                          // Refresh groups
+                          await groupProvider.loadExpenseGroups();
+                        }
+                      },
+                      icon: const Icon(Icons.create_new_folder),
+                      label: const Text('Create Your First Group'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final topGroups = groups.take(3).toList();
+    
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Expense Groups',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        // Show quick add menu
+                        _showQuickAddMenu(context, groupProvider);
+                      },
+                      icon: const Icon(Icons.add),
+                      tooltip: 'Quick Add Transaction',
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        // Navigate to groups screen
+                        Navigator.pushNamed(context, '/groups');
+                      },
+                      child: const Text('View All'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...topGroups.map((group) {
+              final total = groupProvider.getGroupTotal(group.id!);
+              final transactionCount = groupProvider.getGroupTransactions(group.id!).length;
+              
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: Icon(
+                      Icons.folder,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    group.name,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: Text(
+                    '$transactionCount transaction${transactionCount != 1 ? 's' : ''}',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        NumberFormat.currency(symbol: currencySymbol).format(total),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddTransactionScreen(
+                                initialGroupId: group.id,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.add_circle_outline, size: 20),
+                        tooltip: 'Add Transaction to ${group.name}',
+                      ),
+                    ],
+                  ),
+                  onTap: () {
+                    // Navigate to group detail
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => GroupDetailScreen(group: group),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showQuickAddMenu(BuildContext context, ExpenseGroupProvider groupProvider) {
+    final groups = groupProvider.groups;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Quick Add Transaction',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.add_circle_outline),
+                title: const Text('Add to General'),
+                subtitle: const Text('Transaction without group'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddTransactionScreen(),
+                    ),
+                  );
+                },
+              ),
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Add to Group',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddGroupScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.create_new_folder, size: 16),
+                    label: const Text('Create New Group'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (groups.isNotEmpty) ...[
+                ...groups.map((group) => ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: Icon(
+                      Icons.folder,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(group.name),
+                  subtitle: Text(group.description ?? 'No description'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AddTransactionScreen(
+                          initialGroupId: group.id,
+                        ),
+                      ),
+                    );
+                  },
+                )),
+              ] else ...[
+                const ListTile(
+                  leading: Icon(Icons.folder_open, color: Colors.grey),
+                  title: Text('No groups yet'),
+                  subtitle: Text('Create your first group to organize expenses'),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 

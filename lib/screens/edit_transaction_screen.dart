@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction.dart';
+import '../models/expense_group.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/expense_group_provider.dart';
 import '../providers/settings_provider.dart';
 
 class EditTransactionScreen extends StatefulWidget {
@@ -21,6 +23,8 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
   late String _selectedType;
   late String _selectedCategory;
   late DateTime _selectedDate;
+  int? _selectedGroupId;
+  bool _isLoading = false;
 
   final List<String> _expenseCategories = [
     'Food',
@@ -50,6 +54,12 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
     _selectedType = widget.transaction.type;
     _selectedCategory = widget.transaction.category;
     _selectedDate = widget.transaction.date;
+    _selectedGroupId = widget.transaction.groupId;
+    _loadGroups();
+  }
+
+  Future<void> _loadGroups() async {
+    await Provider.of<ExpenseGroupProvider>(context, listen: false).loadExpenseGroups();
   }
 
   @override
@@ -59,8 +69,14 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
     super.dispose();
   }
 
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _saveTransaction() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
       final updatedTransaction = ExpenseTransaction(
         id: widget.transaction.id,
         amount: double.parse(_amountController.text),
@@ -69,16 +85,37 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
         date: _selectedDate,
         type: _selectedType,
         imagePath: widget.transaction.imagePath,
+        groupId: _selectedGroupId,
       );
 
-      Provider.of<TransactionProvider>(context, listen: false)
-          .updateTransaction(updatedTransaction)
-          .then((_) {
-        Navigator.pop(context);
+      await Provider.of<TransactionProvider>(context, listen: false)
+          .updateTransaction(updatedTransaction);
+
+      // Refresh group data if transaction was modified
+      await Provider.of<ExpenseGroupProvider>(context, listen: false)
+          .loadExpenseGroups();
+
+      if (mounted) {
+        Navigator.pop(context, true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Transaction updated successfully')),
         );
-      });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating transaction: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -103,13 +140,15 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
         title: const Text('Edit Transaction'),
         actions: [
           TextButton(
-            onPressed: _submitForm,
+            onPressed: _saveTransaction,
             child: const Text('Save'),
           ),
         ],
       ),
-      body: Consumer<SettingsProvider>(
-        builder: (context, settingsProvider, child) {
+      body: Consumer2<SettingsProvider, ExpenseGroupProvider>(
+        builder: (context, settingsProvider, groupProvider, child) {
+          final groups = groupProvider.groups;
+          
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Form(
@@ -197,6 +236,32 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
+                  if (groups.isNotEmpty) ...[
+                    DropdownButtonFormField<int?>(
+                      value: _selectedGroupId,
+                      decoration: const InputDecoration(
+                        labelText: 'Expense Group (Optional)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.folder),
+                      ),
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('No Group'),
+                        ),
+                        ...groups.map((group) => DropdownMenuItem<int?>(
+                          value: group.id,
+                          child: Text(group.name),
+                        )),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedGroupId = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   Card(
                     child: ListTile(
                       title: const Text('Date'),
@@ -209,7 +274,7 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: _submitForm,
+                    onPressed: _saveTransaction,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
