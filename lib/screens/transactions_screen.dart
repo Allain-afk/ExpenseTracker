@@ -6,6 +6,7 @@ import '../providers/expense_group_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/transaction.dart';
 import '../models/expense_group.dart';
+import '../widgets/inset_grouped_list.dart';
 import 'edit_transaction_screen.dart';
 
 class TransactionsScreen extends StatefulWidget {
@@ -22,82 +23,111 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transactions'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              setState(() {
-                _selectedFilter = value;
-              });
-            },
-            itemBuilder: (context) => _filterOptions.map((filter) {
-              return PopupMenuItem(
-                value: filter,
-                child: Row(
-                  children: [
-                    if (_selectedFilter == filter)
-                      const Icon(Icons.check, size: 20),
-                    if (_selectedFilter == filter)
-                      const SizedBox(width: 8),
-                    Text(filter),
-                  ],
-                ),
-              );
-            }).toList(),
-            child: const Icon(Icons.filter_list),
-          ),
-        ],
-      ),
+      backgroundColor: Colors.transparent,
       body: Consumer3<TransactionProvider, ExpenseGroupProvider, SettingsProvider>(
         builder: (context, transactionProvider, groupProvider, settingsProvider, child) {
           final transactions = _getFilteredTransactions(transactionProvider.transactions);
           
+          Widget content;
           if (transactions.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.receipt_long,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No transactions found',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
+            content = SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.receipt_long,
+                      size: 64,
+                      color: Colors.grey[400],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _selectedFilter == 'All' 
-                        ? 'Start by adding your first transaction'
-                        : 'No ${_selectedFilter.toLowerCase()} transactions found',
-                    style: TextStyle(
-                      color: Colors.grey[500],
+                    const SizedBox(height: 16),
+                    Text(
+                      'No transactions found',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.grey[600],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      _selectedFilter == 'All' 
+                          ? 'Start by adding your first transaction'
+                          : 'No ${_selectedFilter.toLowerCase()} transactions found',
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          } else {
+            Map<String, List<ExpenseTransaction>> grouped = {};
+            for (var t in transactions) {
+              String dateStr = DateFormat('EEEE, MMM d').format(t.date);
+              if (!grouped.containsKey(dateStr)) {
+                grouped[dateStr] = [];
+              }
+              grouped[dateStr]!.add(t);
+            }
+            
+            List<Widget> groupedLists = [];
+            for (var entry in grouped.entries) {
+              groupedLists.add(
+                InsetGroupedList(
+                  headerText: entry.key,
+                  children: entry.value.map((t) => _buildTransactionCard(
+                    context, t, settingsProvider.currencySymbol, transactionProvider, groupProvider
+                  )).toList(),
+                )
+              );
+            }
+            
+            content = SliverPadding(
+              padding: const EdgeInsets.only(bottom: 80),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => groupedLists[index],
+                  childCount: groupedLists.length,
+                ),
               ),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: transactions.length,
-            itemBuilder: (context, index) {
-              final transaction = transactions[index];
-              return _buildTransactionCard(
-                context,
-                transaction,
-                settingsProvider.currencySymbol,
-                transactionProvider,
-                groupProvider,
-              );
-            },
+          return CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                title: const Text('Transactions'),
+                pinned: true,
+                backgroundColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
+                actions: [
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      setState(() {
+                        _selectedFilter = value;
+                      });
+                    },
+                    itemBuilder: (context) => _filterOptions.map((filter) {
+                      return PopupMenuItem(
+                        value: filter,
+                        child: Row(
+                          children: [
+                            if (_selectedFilter == filter)
+                              const Icon(Icons.check, size: 20, color: Colors.blue),
+                            if (_selectedFilter == filter)
+                              const SizedBox(width: 8),
+                            Text(filter),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    icon: const Icon(Icons.line_weight_rounded, color: Colors.blue),
+                  ),
+                ],
+              ),
+              content,
+            ],
           );
         },
       ),
@@ -125,79 +155,83 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         ? groupProvider.getGroupById(transaction.groupId!)
         : null;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+    final isIncome = transaction.type == 'income';
+    final iconColor = isIncome ? Colors.green.shade600 : Colors.red.shade600;
+    final bgColor = isIncome ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1);
+
+    return Container(
+      color: Colors.white,
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: transaction.type == 'income' ? Colors.green : Colors.red,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: Icon(
-            transaction.type == 'income' ? Icons.arrow_upward : Icons.arrow_downward,
-            color: Colors.white,
+            isIncome ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+            color: iconColor,
+            size: 22,
           ),
         ),
         title: Text(
           transaction.description,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(transaction.category),
+            const SizedBox(height: 2),
+            Text(
+              transaction.category,
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+            ),
             if (group != null)
               Container(
                 margin: const EdgeInsets.only(top: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.folder,
-                      size: 12,
-                      color: Theme.of(context).colorScheme.primary,
+                      Icons.folder_rounded,
+                      size: 10,
+                      color: Colors.blue.shade700,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       group.name,
                       style: TextStyle(
-                        fontSize: 11,
-                        color: Theme.of(context).colorScheme.primary,
+                        fontSize: 10,
+                        color: Colors.blue.shade700,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
               ),
-            Text(
-              DateFormat('MMM d, y • h:mm a').format(transaction.date),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
           ],
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  NumberFormat.currency(symbol: currencySymbol).format(transaction.amount),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: transaction.type == 'income' ? Colors.green : Colors.red,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
+            Text(
+              NumberFormat.currency(symbol: currencySymbol).format(transaction.amount),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: isIncome ? Colors.green.shade600 : Colors.black87,
+                fontSize: 16,
+              ),
             ),
+            const SizedBox(width: 4),
             PopupMenuButton<String>(
+              icon: Icon(Icons.more_horiz, color: Colors.grey.shade400),
               onSelected: (value) {
                 if (value == 'edit') {
                   _editTransaction(context, transaction);
@@ -210,8 +244,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   value: 'edit',
                   child: Row(
                     children: [
-                      Icon(Icons.edit, size: 20),
-                      SizedBox(width: 8),
+                      Icon(Icons.edit_outlined, size: 20),
+                      SizedBox(width: 12),
                       Text('Edit'),
                     ],
                   ),
@@ -220,8 +254,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete, size: 20, color: Colors.red),
-                      SizedBox(width: 8),
+                      Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                      SizedBox(width: 12),
                       Text('Delete', style: TextStyle(color: Colors.red)),
                     ],
                   ),
@@ -230,7 +264,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             ),
           ],
         ),
-        isThreeLine: true,
       ),
     );
   }

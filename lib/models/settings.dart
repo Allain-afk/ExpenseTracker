@@ -5,6 +5,8 @@ class Settings {
   final bool notificationsEnabled;
   final double lowBalanceThreshold;
   final String notificationMessage;
+  final String mainWalletName;
+  final int mainWalletColor;
 
   const Settings({
     required this.currency,
@@ -13,6 +15,8 @@ class Settings {
     required this.notificationsEnabled,
     required this.lowBalanceThreshold,
     required this.notificationMessage,
+    required this.mainWalletName,
+    required this.mainWalletColor,
   });
 
   factory Settings.defaultSettings() {
@@ -23,6 +27,8 @@ class Settings {
       notificationsEnabled: true,
       lowBalanceThreshold: 1000.0,
       notificationMessage: 'Hey {name}! Slow down on spending! You are now low on budget. You dumbass!',
+      mainWalletName: 'Total Money',
+      mainWalletColor: 0xFF1F2937,
     );
   }
 
@@ -33,6 +39,8 @@ class Settings {
     bool? notificationsEnabled,
     double? lowBalanceThreshold,
     String? notificationMessage,
+    String? mainWalletName,
+    int? mainWalletColor,
   }) {
     return Settings(
       currency: currency ?? this.currency,
@@ -41,6 +49,8 @@ class Settings {
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       lowBalanceThreshold: lowBalanceThreshold ?? this.lowBalanceThreshold,
       notificationMessage: notificationMessage ?? this.notificationMessage,
+      mainWalletName: mainWalletName ?? this.mainWalletName,
+      mainWalletColor: mainWalletColor ?? this.mainWalletColor,
     );
   }
 
@@ -52,6 +62,8 @@ class Settings {
       'notificationsEnabled': notificationsEnabled,
       'lowBalanceThreshold': lowBalanceThreshold,
       'notificationMessage': notificationMessage,
+      'mainWalletName': mainWalletName,
+      'mainWalletColor': mainWalletColor,
     };
   }
 
@@ -63,6 +75,8 @@ class Settings {
       notificationsEnabled: map['notificationsEnabled'] ?? true,
       lowBalanceThreshold: map['lowBalanceThreshold']?.toDouble() ?? 1000.0,
       notificationMessage: map['notificationMessage'] ?? 'Hey {name}! Slow down on spending! You are now low on budget. You dumbass!',
+      mainWalletName: map['mainWalletName'] ?? 'Total Money',
+      mainWalletColor: map['mainWalletColor'] ?? 0xFF1F2937,
     );
   }
 }

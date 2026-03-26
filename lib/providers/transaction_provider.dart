@@ -18,6 +18,23 @@ class TransactionProvider with ChangeNotifier {
   Map<String, double> get categoryTotals => _categoryTotals;
   double get balance => _totalIncome - _totalExpense;
 
+  double getWalletBalance(int walletId) {
+    double income = 0;
+    double expense = 0;
+    for (var t in _transactions.where((t) => t.walletId == walletId)) {
+      if (t.type == 'income') {
+        income += t.amount;
+      } else {
+        expense += t.amount;
+      }
+    }
+    return income - expense;
+  }
+
+  List<ExpenseTransaction> getWalletTransactions(int walletId) {
+    return _transactions.where((t) => t.walletId == walletId).toList();
+  }
+
   Future<void> loadTransactions() async {
     _transactions = await _dbHelper.getAllTransactions();
     _totalIncome = await _dbHelper.getTotalByType('income');

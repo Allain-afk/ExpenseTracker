@@ -6,12 +6,16 @@ import '../models/expense_group.dart';
 import '../providers/transaction_provider.dart';
 import '../providers/expense_group_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/wallet_provider.dart';
 import 'add_group_screen.dart';
+import 'add_wallet_screen.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final int? initialGroupId;
+  final int? initialWalletId;
+  final String? initialType;
 
-  const AddTransactionScreen({super.key, this.initialGroupId});
+  const AddTransactionScreen({super.key, this.initialGroupId, this.initialWalletId, this.initialType});
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -25,6 +29,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String _selectedCategory = 'Food';
   DateTime _selectedDate = DateTime.now();
   int? _selectedGroupId;
+  int? _selectedWalletId;
   bool _isLoading = false;
 
   final List<String> _expenseCategories = [
@@ -51,11 +56,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   void initState() {
     super.initState();
     _selectedGroupId = widget.initialGroupId;
+    _selectedWalletId = widget.initialWalletId;
+    if (widget.initialType != null) {
+      _selectedType = widget.initialType!;
+      _selectedCategory = _selectedType == 'expense'
+          ? _expenseCategories.first
+          : _incomeCategories.first;
+    }
     _loadGroups();
   }
 
   Future<void> _loadGroups() async {
     await Provider.of<ExpenseGroupProvider>(context, listen: false).loadExpenseGroups();
+    await Provider.of<WalletProvider>(context, listen: false).loadWallets();
+    // Default to first wallet if exists and none is pre-selected
+    final wallets = Provider.of<WalletProvider>(context, listen: false).wallets;
+    if (wallets.isNotEmpty && _selectedWalletId == null) {
+      if (mounted) setState(() { _selectedWalletId = wallets.first.id; });
+    }
   }
 
   @override
@@ -80,6 +98,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         date: _selectedDate,
         type: _selectedType,
         groupId: _selectedGroupId,
+        walletId: _selectedWalletId,
       );
 
       await Provider.of<TransactionProvider>(context, listen: false)
@@ -132,9 +151,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       appBar: AppBar(
         title: const Text('Add Transaction'),
       ),
-      body: Consumer2<SettingsProvider, ExpenseGroupProvider>(
-        builder: (context, settingsProvider, groupProvider, child) {
+      body: Consumer3<SettingsProvider, ExpenseGroupProvider, WalletProvider>(
+        builder: (context, settingsProvider, groupProvider, walletProvider, child) {
           final groups = groupProvider.groups;
+          final wallets = walletProvider.wallets;
           
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -242,10 +262,40 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         )),
                       ],
                       onChanged: (value) {
-                        setState(() {
-                          _selectedGroupId = value;
-                        });
+                        setState(() { _selectedGroupId = value; });
                       },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (wallets.isNotEmpty) ...[
+                    DropdownButtonFormField<int?>(
+                      value: _selectedWalletId,
+                      decoration: const InputDecoration(
+                        labelText: 'Wallet Select (Required)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.credit_card),
+                      ),
+                      validator: (val) => val == null ? 'Please select a specific wallet' : null,
+                      items: wallets.map((wallet) => DropdownMenuItem<int?>(
+                        value: wallet.id,
+                        child: Text(wallet.name),
+                      )).toList(),
+                      onChanged: (value) {
+                        setState(() { _selectedWalletId = value; });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.add_card, color: Colors.blue),
+                        title: const Text('Add your first Wallet!'),
+                        subtitle: const Text('Transactions need to be assigned to a card/wallet.'),
+                        onTap: () async {
+                          final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => const AddWalletScreen()));
+                          if (result == true) await _loadGroups();
+                        },
+                      ),
                     ),
                     const SizedBox(height: 16),
                   ],

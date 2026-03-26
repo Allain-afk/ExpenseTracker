@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../providers/expense_group_provider.dart';
 import '../providers/settings_provider.dart';
 import '../models/expense_group.dart';
+import '../models/expense_group.dart';
+import '../widgets/inset_grouped_list.dart';
 import 'group_detail_screen.dart';
 import 'add_group_screen.dart';
 import 'add_transaction_screen.dart';
@@ -55,31 +57,10 @@ class _ExpenseGroupsScreenState extends State<ExpenseGroupsScreen> with WidgetsB
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Expense Groups'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadGroups,
-          ),
-        ],
-      ),
+      backgroundColor: Colors.transparent,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : const ExpenseGroupsContent(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddGroupScreen()),
-          );
-          if (result == true) {
-            _loadGroups();
-          }
-        },
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }
@@ -94,34 +75,199 @@ class ExpenseGroupsContent extends StatelessWidget {
         final currencySymbol = settingsProvider.currencySymbol;
         final groups = groupProvider.groups;
 
+        Widget content;
         if (groups.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.folder_open,
-                  size: 64,
-                  color: Colors.grey[400],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No expense groups yet',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey[600],
+          content = SliverFillRemaining(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.folder_open,
+                    size: 64,
+                    color: Colors.grey[400],
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Create your first expense group to organize your expenses',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[500],
+                  const SizedBox(height: 16),
+                  Text(
+                    'No expense groups yet',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Create your first expense group to organize your expenses',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        } else {
+          content = SliverPadding(
+            padding: const EdgeInsets.only(bottom: 80, top: 16),
+            sliver: SliverToBoxAdapter(
+              child: InsetGroupedList(
+                children: groups.map((group) {
+                  final total = groupProvider.getGroupTotal(group.id!);
+                  final transactionCount = groupProvider.getGroupTransactions(group.id!).length;
+
+                  return Container(
+                    color: Colors.white,
+                    child: Column(
+                      children: [
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              Icons.folder_rounded,
+                              color: Colors.blue.shade600,
+                              size: 22,
+                            ),
+                          ),
+                          title: Text(
+                            group.name,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (group.description != null && group.description!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4, bottom: 4),
+                                  child: Text(
+                                    group.description!,
+                                    style: TextStyle(
+                                      color: Colors.grey.shade500,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.attach_money,
+                                    size: 14,
+                                    color: Colors.green.shade600,
+                                  ),
+                                  Text(
+                                    NumberFormat.currency(symbol: currencySymbol).format(total),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.green.shade600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Icon(
+                                    Icons.receipt_long,
+                                    size: 14,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$transactionCount txs',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
+                                onPressed: () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => AddTransactionScreen(
+                                        initialGroupId: group.id,
+                                      ),
+                                    ),
+                                  );
+                                  if (result == true) {
+                                    await groupProvider.loadExpenseGroups();
+                                  }
+                                },
+                              ),
+                              PopupMenuButton<String>(
+                                icon: Icon(Icons.more_horiz, color: Colors.grey.shade400),
+                                onSelected: (value) async {
+                                  switch (value) {
+                                    case 'edit':
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => AddGroupScreen(group: group),
+                                        ),
+                                      );
+                                      if (result == true) {
+                                        await groupProvider.loadExpenseGroups();
+                                      }
+                                      break;
+                                    case 'delete':
+                                      _showDeleteConfirmation(context, group, groupProvider);
+                                      break;
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.edit_outlined),
+                                        SizedBox(width: 12),
+                                        Text('Edit'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.delete_outline, color: Colors.red),
+                                        SizedBox(width: 12),
+                                        Text('Delete', style: TextStyle(color: Colors.red)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => GroupDetailScreen(group: group),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
           );
         }
@@ -130,169 +276,31 @@ class ExpenseGroupsContent extends StatelessWidget {
           onRefresh: () async {
             await groupProvider.loadExpenseGroups();
           },
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: groups.length,
-            itemBuilder: (context, index) {
-              final group = groups[index];
-              final total = groupProvider.getGroupTotal(group.id!);
-              final transactionCount = groupProvider.getGroupTransactions(group.id!).length;
-
-              return Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Column(
-                  children: [
-                    ListTile(
-                      contentPadding: const EdgeInsets.all(16),
-                      leading: CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        child: Icon(
-                          Icons.folder,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      ),
-                      title: Text(
-                        group.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (group.description != null && group.description!.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                group.description!,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.attach_money,
-                                size: 16,
-                                color: Colors.green[700],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                NumberFormat.currency(symbol: currencySymbol).format(total),
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green[700],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Icon(
-                                Icons.receipt,
-                                size: 16,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '$transactionCount transaction${transactionCount != 1 ? 's' : ''}',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (value) async {
-                          switch (value) {
-                            case 'edit':
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => AddGroupScreen(group: group),
-                                ),
-                              );
-                              if (result == true) {
-                                await groupProvider.loadExpenseGroups();
-                              }
-                              break;
-                            case 'delete':
-                              _showDeleteConfirmation(context, group, groupProvider);
-                              break;
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit),
-                                SizedBox(width: 8),
-                                Text('Edit'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Delete', style: TextStyle(color: Colors.red)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => GroupDetailScreen(group: group),
-                          ),
-                        );
-                      },
-                    ),
-                    // Add Transaction Button
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => AddTransactionScreen(
-                                      initialGroupId: group.id,
-                                    ),
-                                  ),
-                                );
-                                if (result == true) {
-                                  await groupProvider.loadExpenseGroups();
-                                }
-                              },
-                              icon: const Icon(Icons.add, size: 18),
-                              label: const Text('Add Transaction'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Theme.of(context).colorScheme.primary,
-                                side: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverAppBar(
+                title: const Text('Groups'),
+                pinned: true,
+                backgroundColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.add, color: Colors.blue),
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AddGroupScreen()),
+                      );
+                      if (result == true) {
+                        groupProvider.loadExpenseGroups();
+                      }
+                    },
+                  ),
+                ],
+              ),
+              content,
+            ],
           ),
         );
       },

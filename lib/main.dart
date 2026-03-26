@@ -28,6 +28,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'providers/transaction_provider.dart';
 import 'providers/expense_group_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/wallet_provider.dart';
 import 'screens/add_transaction_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/user_setup_screen.dart';
@@ -57,12 +58,37 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => TransactionProvider()),
         ChangeNotifierProvider(create: (context) => ExpenseGroupProvider()),
         ChangeNotifierProvider(create: (context) => SettingsProvider()),
+        ChangeNotifierProvider(create: (context) => WalletProvider()),
       ],
       child: MaterialApp(
         title: 'Expense Tracker',
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          scaffoldBackgroundColor: const Color(0xFFF2F2F7),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.blue,
+            background: const Color(0xFFF2F2F7),
+          ),
+          fontFamily: '.SF Pro Display', // Use native iOS font if possible, falls back otherwise
           useMaterial3: true,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFFF2F2F7),
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            centerTitle: true,
+            titleTextStyle: TextStyle(
+              color: Colors.black,
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              fontFamily: '.SF Pro Text',
+            ),
+            iconTheme: IconThemeData(color: Colors.blue),
+          ),
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: {
+              TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            },
+          ),
         ),
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,

@@ -15,6 +15,8 @@ class SettingsProvider with ChangeNotifier {
   bool get notificationsEnabled => _settings.notificationsEnabled;
   double get lowBalanceThreshold => _settings.lowBalanceThreshold;
   String get notificationMessage => _settings.notificationMessage;
+  String get mainWalletName => _settings.mainWalletName;
+  int get mainWalletColor => _settings.mainWalletColor;
   bool get isSetupComplete => _isSetupComplete;
 
   Future<void> loadSettings() async {
@@ -46,6 +48,19 @@ class SettingsProvider with ChangeNotifier {
     _settings = Settings.defaultSettings();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('settings');
+    notifyListeners();
+  }
+
+  Future<void> updateMainWallet({
+    String? mainWalletName,
+    int? mainWalletColor,
+  }) async {
+    _settings = _settings.copyWith(
+      mainWalletName: mainWalletName,
+      mainWalletColor: mainWalletColor,
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('settings', json.encode(_settings.toMap()));
     notifyListeners();
   }
 

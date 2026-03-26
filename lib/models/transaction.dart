@@ -9,6 +9,7 @@ class ExpenseTransaction {
   final String type; // 'income' or 'expense'
   final String? imagePath; // Optional receipt image path
   final int? groupId; // Optional reference to expense group
+  final int? walletId; // Optional reference to wallet
 
   ExpenseTransaction({
     this.id,
@@ -19,6 +20,7 @@ class ExpenseTransaction {
     required this.type,
     this.imagePath,
     this.groupId,
+    this.walletId,
   });
 
   Map<String, dynamic> toMap() {
@@ -31,6 +33,7 @@ class ExpenseTransaction {
       'type': type,
       'imagePath': imagePath,
       'groupId': groupId,
+      'walletId': walletId,
     };
   }
 
@@ -44,6 +47,7 @@ class ExpenseTransaction {
       type: map['type'],
       imagePath: map['imagePath'],
       groupId: map['groupId'],
+      walletId: map['walletId'],
     );
   }
 
@@ -56,6 +60,7 @@ class ExpenseTransaction {
     String? type,
     String? imagePath,
     int? groupId,
+    int? walletId,
   }) {
     return ExpenseTransaction(
       id: id ?? this.id,
@@ -66,6 +71,7 @@ class ExpenseTransaction {
       type: type ?? this.type,
       imagePath: imagePath ?? this.imagePath,
       groupId: groupId ?? this.groupId,
+      walletId: walletId ?? this.walletId,
     );
   }
 } 

@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import 'package:flutter/foundation.dart';
 import '../models/transaction.dart';
 import '../models/expense_group.dart';
+import '../models/wallet.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -23,7 +24,7 @@ class DatabaseHelper {
 
       return await openDatabase(
         path,
-        version: 2, // Increment version for new schema
+        version: 3, // Increment version for new schema
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       );
@@ -45,7 +46,17 @@ class DatabaseHelper {
       )
     ''');
 
-    // Create transactions table with groupId support
+    // Create wallets table
+    await db.execute('''
+      CREATE TABLE wallets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        colorValue INTEGER NOT NULL
+      )
+    ''');
+
+    // Create transactions table with groupId and walletId support
     await db.execute('''
       CREATE TABLE transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,7 +67,9 @@ class DatabaseHelper {
         type TEXT NOT NULL,
         imagePath TEXT,
         groupId INTEGER,
-        FOREIGN KEY (groupId) REFERENCES expense_groups (id) ON DELETE SET NULL
+        walletId INTEGER,
+        FOREIGN KEY (groupId) REFERENCES expense_groups (id) ON DELETE SET NULL,
+        FOREIGN KEY (walletId) REFERENCES wallets (id) ON DELETE SET NULL
       )
     ''');
   }
@@ -65,18 +78,90 @@ class DatabaseHelper {
     try {
       if (oldVersion < 2) {
         // Add groupId column to existing transactions table
-        // Check if column already exists to avoid error
         final columns = await db.rawQuery('PRAGMA table_info(transactions)');
         final hasGroupId = columns.any((column) => column['name'] == 'groupId');
-        
         if (!hasGroupId) {
           await db.execute('ALTER TABLE transactions ADD COLUMN groupId INTEGER');
+        }
+      }
+      if (oldVersion < 3) {
+        // Add wallets table
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS wallets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL,
+            colorValue INTEGER NOT NULL
+          )
+        ''');
+
+        // Add walletId column to transactions table
+        final columns = await db.rawQuery('PRAGMA table_info(transactions)');
+        final hasWalletId = columns.any((column) => column['name'] == 'walletId');
+        if (!hasWalletId) {
+          await db.execute('ALTER TABLE transactions ADD COLUMN walletId INTEGER');
         }
       }
     } catch (e) {
       debugPrint('Error upgrading database: $e');
       rethrow;
     }
+  }
+
+  // Wallets CRUD operations
+  Future<int> insertWallet(Wallet wallet) async {
+    final db = await database;
+    return await db.insert('wallets', wallet.toMap());
+  }
+
+  Future<List<Wallet>> getAllWallets() async {
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query('wallets');
+      return List.generate(maps.length, (i) => Wallet.fromMap(maps[i]));
+    } catch (e) {
+      debugPrint('Error getting wallets: $e');
+      rethrow;
+    }
+  }
+
+  Future<Wallet?> getWalletById(int id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'wallets',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (maps.isNotEmpty) {
+      return Wallet.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<int> updateWallet(Wallet wallet) async {
+    final db = await database;
+    return await db.update(
+      'wallets',
+      wallet.toMap(),
+      where: 'id = ?',
+      whereArgs: [wallet.id],
+    );
+  }
+
+  Future<int> deleteWallet(int id) async {
+    final db = await database;
+    // Set walletId to null for associated transactions
+    await db.update(
+      'transactions',
+      {'walletId': null},
+      where: 'walletId = ?',
+      whereArgs: [id],
+    );
+    return await db.delete(
+      'wallets',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   // Expense Groups CRUD operations
