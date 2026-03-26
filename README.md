@@ -123,7 +123,14 @@ lib/
 
 ## 📋 Version History
 
-### v1.2.0 (Latest) 🆕
+### v1.3.0 (Latest) 🌟
+- **Multi-Wallet & Modern UI Enhancements**
+- Introduced Multi-Wallet System with dedicated balances per card
+- Overhauled Dashboard into a glassmorphic Multi-Wallet Carousel
+- Redesigned Bottom Navigation Bar into a sleek floating dock
+- Migrated generic UI lists to iOS-style Inset Grouped layout
+
+### v1.2.0 🆕
 - **New user UI/UX functionalities**
 - Added notification system for low budget threshold
 - Personalized notifications with user name

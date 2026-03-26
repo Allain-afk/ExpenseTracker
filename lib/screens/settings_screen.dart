@@ -123,7 +123,7 @@ class SettingsScreen extends StatelessWidget {
                             icon: Icons.info_outline,
                             iconColor: Colors.blue,
                             title: 'Version',
-                            subtitle: '1.2.0',
+                            subtitle: '1.3.0',
                             onTap: () => _showVersionHistory(context),
                           ),
                           _buildSettingsTile(
@@ -452,11 +452,17 @@ class SettingsScreen extends StatelessWidget {
                       shrinkWrap: true,
                       children: const [
                         _VersionHistoryItem(
+                          version: '1.3.0',
+                          title: 'Multi-Wallet & Modern UI',
+                          description:
+                              '• Introduced Multi-Wallet System with dedicated balances\n• Premium glassmorphic UI overhaul for Dashboard\n• Upgraded Floating Nav Dock\n• Redesigned Settings & Transaction lists',
+                          isLatest: true,
+                        ),
+                        _VersionHistoryItem(
                           version: '1.2.0',
                           title: 'New user UI/UX functionalities',
                           description:
                               '• Added a notification system for low budget threshold\n• Personalized notifications with user name\n• Customizable notification settings',
-                          isLatest: true,
                         ),
                         _VersionHistoryItem(
                           version: '1.0.3',
