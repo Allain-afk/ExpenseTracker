@@ -486,50 +486,51 @@ class SettingsScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Flexible(
-                    child: ListView(
-                      shrinkWrap: true,
-                      children: const [
-                        _VersionHistoryItem(
-                          version: '1.3.0',
-                          title: 'Multi-Wallet & Modern UI',
-                          description:
-                              '• Introduced Multi-Wallet System with dedicated balances\n• Premium glassmorphic UI overhaul for Dashboard\n• Upgraded Floating Nav Dock\n• Redesigned Settings & Transaction lists',
-                          isLatest: true,
-                        ),
-                        _VersionHistoryItem(
-                          version: '1.2.0',
-                          title: 'New user UI/UX functionalities',
-                          description:
-                              '• Added a notification system for low budget threshold\n• Personalized notifications with user name\n• Customizable notification settings',
-                        ),
-                        _VersionHistoryItem(
-                          version: '1.0.3',
-                          title:
-                              'App Animation Feature (Splash Screen) when opened',
-                          description:
-                              '• Beautiful animated splash screen\n• Smooth transitions and loading animations',
-                        ),
-                        _VersionHistoryItem(
-                          version: '1.0.2',
-                          title: 'UI and UX Improvements',
-                          description:
-                              '• Enhanced user interface design\n• Better user experience\n• Performance optimizations',
-                        ),
-                        _VersionHistoryItem(
-                          version: '1.0.1',
-                          title: 'App Icon Update',
-                          description:
-                              '• New and improved app icon\n• Better visual identity',
-                        ),
-                        _VersionHistoryItem(
-                          version: '1.0.0',
-                          title: 'Basic Features for Expense Tracking',
-                          description:
-                              '• Core expense tracking functionality\n• Transaction management\n• Basic reporting features',
-                          isDeprecated: true,
-                        ),
-                      ],
+                  const Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _VersionHistoryItem(
+                            version: '1.3.0',
+                            title: 'Multi-Wallet & Modern UI',
+                            description:
+                                '• Introduced Multi-Wallet System with dedicated balances\n• Premium glassmorphic UI overhaul for Dashboard\n• Upgraded Floating Nav Dock\n• Redesigned Settings & Transaction lists',
+                            isLatest: true,
+                          ),
+                          _VersionHistoryItem(
+                            version: '1.2.0',
+                            title: 'New user UI/UX functionalities',
+                            description:
+                                '• Added a notification system for low budget threshold\n• Personalized notifications with user name\n• Customizable notification settings',
+                          ),
+                          _VersionHistoryItem(
+                            version: '1.0.3',
+                            title:
+                                'App Animation Feature (Splash Screen) when opened',
+                            description:
+                                '• Beautiful animated splash screen\n• Smooth transitions and loading animations',
+                          ),
+                          _VersionHistoryItem(
+                            version: '1.0.2',
+                            title: 'UI and UX Improvements',
+                            description:
+                                '• Enhanced user interface design\n• Better user experience\n• Performance optimizations',
+                          ),
+                          _VersionHistoryItem(
+                            version: '1.0.1',
+                            title: 'App Icon Update',
+                            description:
+                                '• New and improved app icon\n• Better visual identity',
+                          ),
+                          _VersionHistoryItem(
+                            version: '1.0.0',
+                            title: 'Basic Features for Expense Tracking',
+                            description:
+                                '• Core expense tracking functionality\n• Transaction management\n• Basic reporting features',
+                            isDeprecated: true,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -563,103 +564,108 @@ class _VersionHistoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final badgeColor =
+        isLatest
+            ? Colors.blue
+            : isDeprecated
+            ? Colors.grey
+            : Colors.green;
+    final subtitleColor =
+        isDeprecated ? Colors.grey.shade500 : Colors.grey.shade700;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: isLatest ? 4 : 1,
+      elevation: isLatest ? 3 : 1,
       color:
           isLatest
               ? Colors.blue.shade50
               : isDeprecated
               ? Colors.grey.shade100
               : null,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: isLatest,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          iconColor: badgeColor,
+          collapsedIconColor: Colors.grey,
+          title: Text(
+            title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: isDeprecated ? Colors.grey.shade600 : null,
+            ),
+          ),
+          subtitle: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: badgeColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'v$version',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (isLatest)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    horizontal: 6,
+                    vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        isLatest
-                            ? Colors.blue
-                            : isDeprecated
-                            ? Colors.grey
-                            : Colors.green,
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(
-                    'v$version',
-                    style: const TextStyle(
+                  child: const Text(
+                    'LATEST',
+                    style: TextStyle(
                       color: Colors.white,
-                      fontSize: 12,
+                      fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                if (isLatest)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'LATEST',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
+              if (isDeprecated)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'DEPRECATED',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                if (isDeprecated)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'DEPRECATED',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: isDeprecated ? Colors.grey.shade600 : null,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              description,
-              style: TextStyle(
-                fontSize: 14,
-                color:
-                    isDeprecated ? Colors.grey.shade500 : Colors.grey.shade700,
-                height: 1.4,
+                ),
+            ],
+          ),
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                description,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: subtitleColor,
+                  height: 1.4,
+                ),
               ),
             ),
           ],
