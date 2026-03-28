@@ -1,9 +1,9 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/transaction_provider.dart';
 import '../providers/expense_group_provider.dart';
 import '../providers/settings_provider.dart';
+import '../utils/app_theme.dart';
 import 'home_screen.dart';
 import 'transactions_screen.dart';
 import 'expense_groups_screen.dart';
@@ -39,12 +39,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
-      final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
-      final expenseGroupProvider = Provider.of<ExpenseGroupProvider>(context, listen: false);
-      final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
-      
+      final transactionProvider = Provider.of<TransactionProvider>(
+        context,
+        listen: false,
+      );
+      final expenseGroupProvider = Provider.of<ExpenseGroupProvider>(
+        context,
+        listen: false,
+      );
+      final settingsProvider = Provider.of<SettingsProvider>(
+        context,
+        listen: false,
+      );
+
       // Add timeout to prevent infinite loading
       await Future.wait([
         settingsProvider.loadSettings(),
@@ -60,14 +69,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     } catch (e) {
       debugPrint('Error loading data: $e');
     }
-    
+
     setState(() {
       _isLoading = false;
     });
   }
 
   void _showAddTransactionMenu() {
-    final groupProvider = Provider.of<ExpenseGroupProvider>(context, listen: false);
+    final groupProvider = Provider.of<ExpenseGroupProvider>(
+      context,
+      listen: false,
+    );
     final groups = groupProvider.groups;
 
     showModalBottomSheet(
@@ -81,10 +93,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             children: [
               const Text(
                 'Add Transaction',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               ListTile(
@@ -130,34 +139,39 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
               const SizedBox(height: 8),
               if (groups.isNotEmpty) ...[
-                ...groups.map((group) => ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    child: Icon(
-                      Icons.folder,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      size: 20,
-                    ),
-                  ),
-                  title: Text(group.name),
-                  subtitle: Text(group.description ?? 'No description'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AddTransactionScreen(
-                          initialGroupId: group.id,
-                        ),
+                ...groups.map(
+                  (group) => ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      child: Icon(
+                        Icons.folder,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                        size: 20,
                       ),
-                    );
-                  },
-                )),
+                    ),
+                    title: Text(group.name),
+                    subtitle: Text(group.description ?? 'No description'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => AddTransactionScreen(
+                                initialGroupId: group.id,
+                              ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ] else ...[
                 const ListTile(
                   leading: Icon(Icons.folder_open, color: Colors.grey),
                   title: Text('No groups yet'),
-                  subtitle: Text('Create your first group to organize expenses'),
+                  subtitle: Text(
+                    'Create your first group to organize expenses',
+                  ),
                 ),
               ],
             ],
@@ -171,16 +185,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
-              Text(
-                'Loading...',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
+              Text('Loading...', style: Theme.of(context).textTheme.bodyLarge),
             ],
           ),
         ),
@@ -188,66 +200,93 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
 
     return Scaffold(
-      extendBody: true, // Allow body to scroll behind bottom navigation
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      extendBody: true,
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: AppTheme.screenBackgroundGradient,
+        ),
+        child: IndexedStack(index: _currentIndex, children: _screens),
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
           margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
           height: 68,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.85),
+            color: AppTheme.surface.withValues(alpha: 0.84),
             borderRadius: BorderRadius.circular(34),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 24,
+                offset: const Offset(0, 14),
               ),
             ],
-            border: Border.all(color: Colors.white, width: 1.5),
+            border: Border.all(
+              color: AppTheme.border.withValues(alpha: 0.85),
+              width: 1,
+            ),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(34),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(child: _buildNavIcon(0, Icons.home_outlined, Icons.home, 'Home')),
-                  Expanded(child: _buildNavIcon(1, Icons.list_alt_outlined, Icons.list_alt, 'Transactions')),
-                  
-                  // Central Floating + Action
-                  GestureDetector(
-                    onTap: _showAddTransactionMenu,
-                    child: Container(
-                      height: 52,
-                      width: 52,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Colors.blueAccent, Colors.blue],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blue.withOpacity(0.4),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.add, color: Colors.white, size: 28),
-                    ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(
+                  child: _buildNavIcon(
+                    0,
+                    Icons.home_outlined,
+                    Icons.home,
+                    'Home',
                   ),
-                  
-                  Expanded(child: _buildNavIcon(2, Icons.folder_outlined, Icons.folder, 'Groups')),
-                  Expanded(child: _buildNavIcon(3, Icons.settings_outlined, Icons.settings, 'Settings')),
-                ],
-              ),
+                ),
+                Expanded(
+                  child: _buildNavIcon(
+                    1,
+                    Icons.list_alt_outlined,
+                    Icons.list_alt,
+                    'Transactions',
+                  ),
+                ),
+
+                // Central Floating + Action
+                GestureDetector(
+                  onTap: _showAddTransactionMenu,
+                  child: Container(
+                    height: 52,
+                    width: 52,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.primaryGradient,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primary.withValues(alpha: 0.32),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.add, color: Colors.white, size: 28),
+                  ),
+                ),
+
+                Expanded(
+                  child: _buildNavIcon(
+                    2,
+                    Icons.folder_outlined,
+                    Icons.folder,
+                    'Groups',
+                  ),
+                ),
+                Expanded(
+                  child: _buildNavIcon(
+                    3,
+                    Icons.settings_outlined,
+                    Icons.settings,
+                    'Settings',
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -255,7 +294,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
-  Widget _buildNavIcon(int index, IconData outlineIcon, IconData solidIcon, String label) {
+  Widget _buildNavIcon(
+    int index,
+    IconData outlineIcon,
+    IconData solidIcon,
+    String label,
+  ) {
     final isSelected = _currentIndex == index;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -272,12 +316,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+              color:
+                  isSelected
+                      ? AppTheme.softTint(AppTheme.primary)
+                      : Colors.transparent,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
               isSelected ? solidIcon : outlineIcon,
-              color: isSelected ? Colors.blue : Colors.grey.shade400,
+              color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
               size: 24,
             ),
           ),
@@ -287,7 +334,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             style: TextStyle(
               fontSize: 10,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              color: isSelected ? Colors.blue : Colors.grey.shade500,
+              color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
             ),
             maxLines: 1,
             overflow: TextOverflow.visible,
@@ -297,4 +344,4 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
     );
   }
-} 
+}

@@ -24,7 +24,7 @@ class DatabaseHelper {
 
       return await openDatabase(
         path,
-        version: 3, // Increment version for new schema
+        version: 4, // Increment version for new schema
         onCreate: _createDB,
         onUpgrade: _upgradeDB,
       );
@@ -72,6 +72,11 @@ class DatabaseHelper {
         FOREIGN KEY (walletId) REFERENCES wallets (id) ON DELETE SET NULL
       )
     ''');
+
+    // Create indices for performance
+    await db.execute('CREATE INDEX idx_transactions_date ON transactions(date)');
+    await db.execute('CREATE INDEX idx_transactions_type ON transactions(type)');
+    await db.execute('CREATE INDEX idx_transactions_group ON transactions(groupId)');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -101,6 +106,12 @@ class DatabaseHelper {
         if (!hasWalletId) {
           await db.execute('ALTER TABLE transactions ADD COLUMN walletId INTEGER');
         }
+      }
+      if (oldVersion < 4) {
+        // Add indices for performance in v4
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type)');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_transactions_group ON transactions(groupId)');
       }
     } catch (e) {
       debugPrint('Error upgrading database: $e');

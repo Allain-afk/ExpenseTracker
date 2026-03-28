@@ -5,6 +5,7 @@ import '../providers/transaction_provider.dart';
 import '../models/settings.dart';
 import '../widgets/inset_grouped_list.dart';
 import 'manage_wallets_screen.dart';
+import '../utils/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -13,135 +14,177 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Consumer<SettingsProvider>(
-        builder: (context, settingsProvider, child) {
-          return CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              const SliverAppBar(
-                title: Text('Settings'),
-                pinned: true,
-                backgroundColor: Colors.transparent,
-                surfaceTintColor: Colors.transparent,
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.only(bottom: 80, top: 16),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    children: [
-                      InsetGroupedList(
-                        headerText: 'PREFERENCES',
-                        children: [
-                          _buildSettingsTile(
-                            icon: Icons.currency_exchange,
-                            iconColor: Colors.green,
-                            title: 'Currency',
-                            subtitle: '${settingsProvider.settings.currency} (${settingsProvider.settings.currencySymbol})',
-                            onTap: () => _showCurrencySelector(context, settingsProvider),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      InsetGroupedList(
-                        headerText: 'CARDS & WALLETS',
-                        children: [
-                          _buildSettingsTile(
-                            icon: Icons.credit_card,
-                            iconColor: Colors.blueAccent,
-                            title: 'Manage Cards',
-                            subtitle: 'Add, edit, or remove wallets',
-                            onTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => const ManageWalletsScreen()));
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      InsetGroupedList(
-                        headerText: 'NOTIFICATIONS',
-                        children: [
-                          Container(
-                            color: Colors.white,
-                            child: SwitchListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                              secondary: Container(
-                                width: 30,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  color: Colors.orange,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Icon(Icons.notifications_active, color: Colors.white, size: 18),
-                              ),
-                              title: const Text('Low Balance Alerts', style: TextStyle(fontSize: 16)),
-                              subtitle: const Text('Get notified when balance is low'),
-                              value: settingsProvider.notificationsEnabled,
-                              onChanged: (value) {
-                                settingsProvider.updateNotificationSettings(
-                                  notificationsEnabled: value,
+      body: SafeArea(
+        bottom: false,
+        child: Consumer<SettingsProvider>(
+          builder: (context, settingsProvider, child) {
+            return CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                const SliverAppBar(
+                  primary: false,
+                  title: Text('Settings'),
+                  pinned: true,
+                  backgroundColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.only(bottom: 104, top: 16),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        InsetGroupedList(
+                          headerText: 'Preferences',
+                          children: [
+                            _buildSettingsTile(
+                              icon: Icons.currency_exchange,
+                              iconColor: Colors.green,
+                              title: 'Currency',
+                              subtitle:
+                                  '${settingsProvider.settings.currency} (${settingsProvider.settings.currencySymbol})',
+                              onTap:
+                                  () => _showCurrencySelector(
+                                    context,
+                                    settingsProvider,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        InsetGroupedList(
+                          headerText: 'Cards & Wallets',
+                          children: [
+                            _buildSettingsTile(
+                              icon: Icons.credit_card,
+                              iconColor: Colors.blueAccent,
+                              title: 'Manage Cards',
+                              subtitle: 'Add, edit, or remove wallets',
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) =>
+                                            const ManageWalletsScreen(),
+                                  ),
                                 );
                               },
                             ),
-                          ),
-                          if (settingsProvider.notificationsEnabled) ...[
-                            _buildSettingsTile(
-                              icon: Icons.account_balance_wallet,
-                              iconColor: Colors.blueGrey,
-                              title: 'Threshold Amount',
-                              subtitle: '${settingsProvider.currencySymbol}${settingsProvider.lowBalanceThreshold.toStringAsFixed(2)}',
-                              onTap: () => _showThresholdEditor(context, settingsProvider),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        InsetGroupedList(
+                          headerText: 'Notifications',
+                          children: [
+                            Container(
+                              color: Colors.white,
+                              child: SwitchListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                secondary: Container(
+                                  width: 30,
+                                  height: 30,
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(
+                                    Icons.notifications_active,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                                title: const Text(
+                                  'Low Balance Alerts',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                                subtitle: const Text(
+                                  'Get notified when balance is low',
+                                ),
+                                value: settingsProvider.notificationsEnabled,
+                                onChanged: (value) {
+                                  settingsProvider.updateNotificationSettings(
+                                    notificationsEnabled: value,
+                                  );
+                                },
+                              ),
                             ),
+                            if (settingsProvider.notificationsEnabled) ...[
+                              _buildSettingsTile(
+                                icon: Icons.account_balance_wallet,
+                                iconColor: Colors.blueGrey,
+                                title: 'Threshold Amount',
+                                subtitle:
+                                    '${settingsProvider.currencySymbol}${settingsProvider.lowBalanceThreshold.toStringAsFixed(2)}',
+                                onTap:
+                                    () => _showThresholdEditor(
+                                      context,
+                                      settingsProvider,
+                                    ),
+                              ),
+                              _buildSettingsTile(
+                                icon: Icons.message,
+                                iconColor: Colors.indigo,
+                                title: 'Alert Message',
+                                subtitle: settingsProvider.notificationMessage,
+                                onTap:
+                                    () => _showMessageEditor(
+                                      context,
+                                      settingsProvider,
+                                    ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        InsetGroupedList(
+                          headerText: 'Data Management',
+                          children: [
                             _buildSettingsTile(
-                              icon: Icons.message,
-                              iconColor: Colors.indigo,
-                              title: 'Alert Message',
-                              subtitle: settingsProvider.notificationMessage,
-                              onTap: () => _showMessageEditor(context, settingsProvider),
+                              icon: Icons.delete_forever,
+                              iconColor: Colors.red,
+                              title: 'Reset All App Data',
+                              subtitle:
+                                  'Delete all transactions and reset settings',
+                              titleColor: Colors.red,
+                              onTap:
+                                  () => _showResetAllDataDialog(
+                                    context,
+                                    settingsProvider,
+                                  ),
                             ),
                           ],
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      InsetGroupedList(
-                        headerText: 'DATA MANAGEMENT',
-                        children: [
-                          _buildSettingsTile(
-                            icon: Icons.delete_forever,
-                            iconColor: Colors.red,
-                            title: 'Reset All App Data',
-                            subtitle: 'Delete all transactions and reset settings',
-                            titleColor: Colors.red,
-                            onTap: () => _showResetAllDataDialog(context, settingsProvider),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      InsetGroupedList(
-                        headerText: 'ABOUT',
-                        children: [
-                          _buildSettingsTile(
-                            icon: Icons.info_outline,
-                            iconColor: Colors.blue,
-                            title: 'Version',
-                            subtitle: '1.3.0',
-                            onTap: () => _showVersionHistory(context),
-                          ),
-                          _buildSettingsTile(
-                            icon: Icons.person_outline,
-                            iconColor: Colors.purple,
-                            title: 'Developer',
-                            subtitle: 'Allain Ralph Legaspi',
-                            showChevron: false,
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(height: 24),
+                        InsetGroupedList(
+                          headerText: 'About',
+                          children: [
+                            _buildSettingsTile(
+                              icon: Icons.info_outline,
+                              iconColor: AppTheme.primary,
+                              title: 'Version',
+                              subtitle: '1.3.0',
+                              onTap: () => _showVersionHistory(context),
+                            ),
+                            _buildSettingsTile(
+                              icon: Icons.person_outline,
+                              iconColor: Colors.purple,
+                              title: 'Developer',
+                              subtitle: 'Allain Ralph Legaspi',
+                              showChevron: false,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -168,21 +211,15 @@ class SettingsScreen extends StatelessWidget {
           ),
           child: Icon(icon, color: Colors.white, size: 18),
         ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 16,
-            color: titleColor,
-          ),
-        ),
-        subtitle: subtitle != null
-            ? Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              )
-            : null,
-        trailing: showChevron ? const Icon(Icons.chevron_right, color: Colors.grey) : null,
+        title: Text(title, style: TextStyle(fontSize: 16, color: titleColor)),
+        subtitle:
+            subtitle != null
+                ? Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis)
+                : null,
+        trailing:
+            showChevron
+                ? const Icon(Icons.chevron_right, color: Colors.grey)
+                : null,
         onTap: onTap,
       ),
     );
@@ -268,6 +305,11 @@ class SettingsScreen extends StatelessWidget {
             ),
             TextButton(
               onPressed: () async {
+                final transactionProvider = Provider.of<TransactionProvider>(
+                  context,
+                  listen: false,
+                );
+
                 Navigator.pop(context);
 
                 // Show loading dialog
@@ -288,25 +330,22 @@ class SettingsScreen extends StatelessWidget {
 
                 // Reset all app data
                 await settingsProvider.resetAllAppData();
+                if (!context.mounted) return;
 
                 // Reload transaction provider to reflect changes
-                if (context.mounted) {
-                  await Provider.of<TransactionProvider>(
-                    context,
-                    listen: false,
-                  ).loadTransactions();
+                await transactionProvider.loadTransactions();
+                if (!context.mounted) return;
 
-                  // Close loading dialog
-                  Navigator.pop(context);
+                // Close loading dialog
+                Navigator.pop(context);
 
-                  // Show success message
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('All app data has been reset successfully'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
+                // Show success message
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('All app data has been reset successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
               },
               child: const Text(
                 'Reset All Data',

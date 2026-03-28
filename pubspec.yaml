@@ -48,6 +48,7 @@ dependencies:
   home_widget: ^0.7.0
   flutter_local_notifications: ^17.2.2
   permission_handler: ^11.3.1
+  google_fonts: ^8.0.2
 
 dev_dependencies:
   flutter_test:

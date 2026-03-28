@@ -23,6 +23,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'providers/transaction_provider.dart';
@@ -34,17 +35,25 @@ import 'screens/splash_screen.dart';
 import 'screens/user_setup_screen.dart';
 import 'services/widget_service.dart';
 import 'services/notification_service.dart';
+import 'utils/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize widget service
+
   await WidgetService.initializeWidget();
   await WidgetService.registerBackgroundCallback();
-  
-  // Initialize notification service
   await NotificationService().initialize();
-  
+
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+      systemNavigationBarColor: AppTheme.background,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+
   runApp(const MyApp());
 }
 
@@ -62,27 +71,8 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Expense Tracker',
-        theme: ThemeData(
-          scaffoldBackgroundColor: const Color(0xFFF2F2F7),
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
-            background: const Color(0xFFF2F2F7),
-          ),
-          fontFamily: '.SF Pro Display', // Use native iOS font if possible, falls back otherwise
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFF2F2F7),
-            surfaceTintColor: Colors.transparent,
-            elevation: 0,
-            centerTitle: true,
-            titleTextStyle: TextStyle(
-              color: Colors.black,
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              fontFamily: '.SF Pro Text',
-            ),
-            iconTheme: IconThemeData(color: Colors.blue),
-          ),
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme.copyWith(
           pageTransitionsTheme: const PageTransitionsTheme(
             builders: {
               TargetPlatform.android: CupertinoPageTransitionsBuilder(),
@@ -90,6 +80,16 @@ class MyApp extends StatelessWidget {
             },
           ),
         ),
+        builder: (context, child) {
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.dark,
+              statusBarBrightness: Brightness.light,
+            ),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
